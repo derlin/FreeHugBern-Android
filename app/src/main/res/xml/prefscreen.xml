@@ -30,6 +30,14 @@
             android:title="force sync" />
 
         <Preference
+            android:key="pref_clear_log"
+            android:title="clear log" />
+
+        <Preference
+            android:key="pref_calibrate"
+            android:title="force calibration" />
+
+        <Preference
             android:key="pref_reset"
             android:title="unbind from device" />
 

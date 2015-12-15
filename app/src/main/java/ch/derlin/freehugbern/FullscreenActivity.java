@@ -54,7 +54,7 @@ public class FullscreenActivity extends Activity{
         setContentView( R.layout.activity_fullscreen );
 
         final View controlsView = findViewById( R.id.fullscreen_content_controls );
-        final View contentView = findViewById( R.id.fullscreen_content );
+        final View contentView = findViewById( R.id.fullscreen_hug_count );
 
         mActionBar = getActionBar();
         // Set up an instance of SystemUiHider to control the system UI for

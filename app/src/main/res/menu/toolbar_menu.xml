@@ -3,5 +3,5 @@
       <item android:id="@+id/toolbar_connect"
           android:title="connect/disconnect"
           android:showAsAction="always"
-          android:icon="@drawable/connected"  />
+          android:icon="@drawable/disconnected"  />
 </menu>

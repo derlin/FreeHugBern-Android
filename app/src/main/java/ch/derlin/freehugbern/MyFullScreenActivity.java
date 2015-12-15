@@ -23,19 +23,22 @@ import ch.derlin.freehugbern.prefs.frag.PrefsFragment;
  *         Date 09/12/15.
  */
 public class MyFullScreenActivity extends FullscreenActivity implements View.OnClickListener{
+
     private Button settingsButton;
-    private TextView cnterTextView, noConnectionTextView;
+    private TextView cnterTextView, durTextView, durTotTextView, noConnectionTextView, debugTextView;
     private BluetoothService mSPP;
     private MenuItem mMenuConnect;
+
 
     private BtBroadcastReceiver mBtReceiver = new BtBroadcastReceiver(){
 
         @Override
         public void onBtConnected(){
             mMenuConnect.setEnabled( true );
-            Toast.makeText( MyFullScreenActivity.this, "Connected to " + mSPP.getDeviceAddress(), Toast.LENGTH_LONG ).show();
+            Toast.makeText( MyFullScreenActivity.this, "Connected to " + mSPP.getDeviceAddress(), Toast.LENGTH_LONG )
+                    .show();
             noConnectionTextView.setVisibility( View.INVISIBLE );
-            if(mMenuConnect != null){
+            if( mMenuConnect != null ){
                 mMenuConnect.setIcon( getResources().getDrawable( R.drawable.connected ) );
             }
             mSPP.send( "I", false );  // get infos (counter/duration)
@@ -58,12 +61,35 @@ public class MyFullScreenActivity extends FullscreenActivity implements View.OnC
 
         @Override
         public void onBtDataReceived( String line ){
-            super.onBtDataReceived( line );
-            cnterTextView.setText( line.split( " " )[ 0 ] );
+            App.appendLog( line );
+            String[] datas = line.split( " " );
+
+            if( datas.length == 4 && "#".equals( datas[ 0 ] ) ){
+                cnterTextView.setText( datas[ 1 ] );
+                durTextView.setText( msToSec( datas[ 2 ] ) );
+                durTotTextView.setText( msToMin( datas[ 3 ] ) );
+
+            }else{
+                debugTextView.setText( line );
+            }
         }
 
     };
 
+
+    static private String msToMin( String millis ){
+        long milliseconds = Long.parseLong( millis );
+        int sec = (int) (milliseconds / 1000) % 60 ;
+        int min = (int) ((milliseconds / (1000*60)) % 60);
+        return String.format( "%d.%d", min, sec );
+    }
+
+
+    static private String msToSec( String millis ){
+        long ms = Long.parseLong( millis );
+        double sec  = ms / 1000.0 ;
+        return String.format( "%.2f", sec );
+    }
 
 
     // ----------------------------------------------------
@@ -87,7 +113,10 @@ public class MyFullScreenActivity extends FullscreenActivity implements View.OnC
         settingsButton = ( Button ) findViewById( R.id.settings_button );
         settingsButton.setOnClickListener( this );
         settingsButton.setEnabled( false ); // wait for the bt service to start
-        cnterTextView = ( TextView ) findViewById( R.id.fullscreen_content );
+        cnterTextView = ( TextView ) findViewById( R.id.fullscreen_hug_count );
+        durTextView = ( TextView ) findViewById( R.id.fullscreen_hug_dur );
+        durTotTextView = ( TextView ) findViewById( R.id.fullscreen_hug_dur_tot );
+        debugTextView = ( TextView ) findViewById( R.id.fullscreen_debug );
         noConnectionTextView = ( TextView ) findViewById( R.id.no_connection_text );
 
         // wait until the bluetooth service has been started
@@ -122,29 +151,30 @@ public class MyFullScreenActivity extends FullscreenActivity implements View.OnC
         MenuInflater inflater = getMenuInflater();
         inflater.inflate( R.menu.toolbar_menu, menu );
         mMenuConnect = menu.findItem( R.id.toolbar_connect );
-        if(mSPP != null && mSPP.isConnected()){
+        if( mSPP != null && mSPP.isConnected() ){
             mMenuConnect.setIcon( getResources().getDrawable( R.drawable.connected ) );
         }
         return super.onCreateOptionsMenu( menu );
     }
 
+
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
+    public boolean onOptionsItemSelected( MenuItem item ){
+        switch( item.getItemId() ){
             // toggle connect/disconnect
             case R.id.toolbar_connect:
-                if(mSPP.isConnected()){
+                if( mSPP.isConnected() ){
                     mSPP.disconnect();
 
                 }else{
                     // if already a device, connect, else, start the settings activity
                     String addr = PreferenceManager.getDefaultSharedPreferences( this ).getString(
                             "pref_paired_device", null );
-                    if(addr == null){
+                    if( addr == null ){
                         startActivity( new Intent( this, PrefsFragment.class ) );
                     }else{
                         mMenuConnect.setEnabled( false );
-                        mSPP.connect(addr);
+                        mSPP.connect( addr );
                     }
                 }
                 break;
@@ -158,10 +188,11 @@ public class MyFullScreenActivity extends FullscreenActivity implements View.OnC
 
     private void onBtServiceStarted(){
 
-        if(!mSPP.isBluetoothEnabled()){
+        if( !mSPP.isBluetoothEnabled() ){
             mSPP.enable();
         }
-        String macAddress = PreferenceManager.getDefaultSharedPreferences( this ).getString( "pref_paired_device", null );
+        String macAddress = PreferenceManager.getDefaultSharedPreferences( this ).getString( "pref_paired_device",
+                null );
         if( macAddress == null ){
             settingsButton.callOnClick();
         }else{
@@ -178,4 +209,8 @@ public class MyFullScreenActivity extends FullscreenActivity implements View.OnC
         }
 
     }
+
+    // ----------------------------------------------------
+
+
 }

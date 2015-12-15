@@ -1,14 +1,17 @@
 package ch.derlin.freehugbern.prefs.frag;
 
 import android.app.Activity;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.widget.Toast;
+import ch.derlin.freehugbern.App;
 import ch.derlin.freehugbern.R;
 import ch.derlin.freehugbern.bt.BluetoothService;
 import ch.derlin.freehugbern.bt.DeviceListActivity;
@@ -34,6 +37,7 @@ public class PrefsFragment extends PreferenceFragment implements Preference.OnPr
 
     private static final int REQUEST_CONNECT_DEVICE = 123;
     private Preference mPairingPref, mResetPref, mForceSyncPref;
+    private Preference mClearLogPref, mCalibratePref;
     private ListPreference mDisplayListPref;
 
 
@@ -56,12 +60,27 @@ public class PrefsFragment extends PreferenceFragment implements Preference.OnPr
         mResetPref = findPreference( "pref_reset" );
         mResetPref.setOnPreferenceClickListener( this );
 
+        mCalibratePref = findPreference( "pref_calibrate" );
+        mCalibratePref.setOnPreferenceClickListener( this );
+
+        mClearLogPref = findPreference( "pref_clear_log" );
+        mClearLogPref.setOnPreferenceClickListener( this );
+
         mForceSyncPref = findPreference( "pref_sync" );
         mForceSyncPref.setOnPreferenceClickListener( this );
 
         mDisplayListPref = ( ListPreference ) findPreference( "pref_display_type" );
         mDisplayListPref.setOnPreferenceChangeListener( this );
 
+    }
+
+
+    private void reset(){
+        BluetoothService.getInstance().disconnect();
+        PreferenceManager.getDefaultSharedPreferences( getActivity() ).edit() //
+                .putString( "pref_paired_device", null ).commit();
+        mPairingPref.setSummary( "" );
+        sendToBt( "R" );
     }
 
 
@@ -74,14 +93,16 @@ public class PrefsFragment extends PreferenceFragment implements Preference.OnPr
             startActivityForResult( intent, REQUEST_CONNECT_DEVICE );
 
         }else if( preference == mResetPref ){
-            BluetoothService.getInstance().disconnect();
-            PreferenceManager.getDefaultSharedPreferences( getActivity() ).edit() //
-                    .putString( "pref_paired_device", null ).commit();
-            mPairingPref.setSummary( "" );
-            sendToBt( "R" );
+            showResetConfirmDialog();
 
         }else if( preference == mForceSyncPref ){
             sendToBt( "I" );
+
+        }else if( preference == mCalibratePref ){
+            sendToBt( "C" );
+
+        }else if( preference == mClearLogPref ){
+            showClearLogConfirmDialog();
         }
 
         return true;
@@ -95,7 +116,7 @@ public class PrefsFragment extends PreferenceFragment implements Preference.OnPr
         if( preference == mDisplayListPref ){
             String v = mDisplayListPref.getValue();
             int index = mDisplayListPref.findIndexOfValue( v );
-            sendToBt( index == 0 ? "C" : "D" );
+            sendToBt( index == 0 ? "H" : "D" );
 
             // Set the summary to reflect the new value.
             preference.setSummary( index >= 0 ? mDisplayListPref.getEntries()[ index ] : null );
@@ -150,6 +171,39 @@ public class PrefsFragment extends PreferenceFragment implements Preference.OnPr
                         "in return from the devicelist activity..." );
             }
         }
+    }
+
+
+    // ----------------------------------------------------
+
+
+    private void showClearLogConfirmDialog(){
+        new AlertDialog.Builder( getActivity() )  //
+                .setIcon( android.R.drawable.ic_dialog_alert )  //
+                .setTitle( "Clearing Log" )  //
+                .setMessage( "Are you sure you want to clear the logfile?" ) //
+                .setPositiveButton( "Yes", new DialogInterface.OnClickListener(){
+                    @Override
+                    public void onClick( DialogInterface dialog, int which ){
+                        App.clearLog();
+                    }
+                } ) //
+                .setNegativeButton( "No", null ).show();
+    }
+
+
+    private void showResetConfirmDialog(){
+        new AlertDialog.Builder( getActivity() )  //
+                .setIcon( android.R.drawable.ic_dialog_alert )  //
+                .setTitle( "Reset " )  //
+                .setMessage( "Are you sure you want to forget this bt connection?" ) //
+                .setPositiveButton( "Yes", new DialogInterface.OnClickListener(){
+                    @Override
+                    public void onClick( DialogInterface dialog, int which ){
+                        reset();
+                    }
+                } )  //
+                .setNegativeButton( "No", null ).show();
     }
 
 
